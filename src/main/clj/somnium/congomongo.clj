@@ -63,17 +63,20 @@
    :from   -> argument type, same options as above
    :one?   -> defaults to false, use fetch-one as a shortcut
    :count? -> defaults to false, use fetch-count as a shortcut"
-  {:arglists '([collection {:where {} :only [] :as :clojure :from :clojure :one false :count false}])}
-  [coll :where  {} :only [] :as :clojure :from :clojure :one? false :count? false]
+  {:arglists '([collection {:where {} :only [] :as :clojure :from :clojure :limit nil :skip nil
+                            :one false :count false}])}
+  [coll :where {} :only [] :as :clojure :from :clojure :limit nil :skip nil :one? false :count? false]
   (let [n-where (coerce where [from :mongo])
         n-only  (coerce-fields only)
         n-col   (get-coll coll)]
     (cond
       count? (.getCount n-col n-where n-only)
       one?   (if-let [m (.findOne n-col n-where n-only)]
-               (coerce m [:mongo as]) nil)
-      :else  (if-let [m (.find n-col n-where n-only)]
-               (coerce m [:mongo as] :many :true) nil))))
+               (coerce m [:mongo as]))
+      :else  (when-let [m (.find n-col n-where n-only)]
+               (if limit (.limit m limit))
+               (if skip  (.skip m skip))
+               (coerce m [:mongo as] :many :true)))))
 
 (defn fetch-one [col & options]
   (apply fetch col (concat options [:one? true])))
